@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#000000">
+<title>metal</title><meta name="robots" content="noindex">
+<style>
+:root{ --bg:#000; --txt:#f4f5f6; --dim:#7d8288; }
+*{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body{ margin:0; height:100%; background:var(--bg); color:var(--txt);
+  font-family:-apple-system,system-ui,"SF Pro Text",Inter,Roboto,"Helvetica Neue",sans-serif; overscroll-behavior:none; }
+body{ display:flex; flex-direction:column; height:100dvh; max-width:520px; margin:0 auto;
+  padding:calc(12px + env(safe-area-inset-top)) 22px calc(10px + env(safe-area-inset-bottom)); }
+
+header{ display:flex; justify-content:space-between; align-items:baseline; padding:2px 2px 0; }
+header .logo{ font-size:13px; font-weight:600; letter-spacing:.14em; }
+header .st{ color:var(--dim); font-size:10.5px; font-variant-numeric:tabular-nums; letter-spacing:.04em; }
+
+main{ flex:1; display:flex; flex-direction:column; justify-content:space-evenly; gap:14px; min-height:0; }
+.row{ display:flex; align-items:center; gap:14px; }
+.row.spread{ justify-content:space-between; }
+
+/* ---------- liquid-metal base ----------
+Every .m element gets per-frame vars from JS:
+  --a   angle (rad) from the element center to the magnet
+  --inf influence 0..1 (strength x proximity)
+  --tx/--ty pull in px, --sc jelly scale
+*/
+.m{ --ca: var(--a, -1.57rad); --hot: calc(var(--inf, 0));
+  transform:translate(var(--tx,0px),var(--ty,0px)) scale(var(--sc,1)); will-change:transform; }
+
+.metal{
+  border:1px solid transparent; border-radius:999px;
+  background:
+    radial-gradient(95% 150% at calc(50% + cos(var(--ca)) * 58% * var(--hot)) calc(50% + sin(var(--ca)) * 58% * var(--hot)),
+      rgba(255,255,255,calc(.55 * var(--hot))) 0%, rgba(255,255,255,calc(.12 * var(--hot))) 36%, rgba(255,255,255,0) 60%) padding-box,
+    linear-gradient(calc(var(--ca) + 1.5708rad),
+      rgba(255,255,255,calc(.13 * var(--hot))) 0%, rgba(255,255,255,0) 42%) padding-box,
+    linear-gradient(calc(var(--ca) + 1.5708rad),
+      #31363c 0%, #191c1f 34%, #22262a 58%, #0a0b0c 100%) padding-box,
+    conic-gradient(from var(--ca),
+      rgba(255,255,255,calc(.28 + .72 * var(--hot))) 0deg,
+      rgba(148,154,160,calc(.34 + .18 * var(--hot))) 64deg,
+      rgba(62,66,72,.38) 150deg,
+      rgba(44,47,52,.34) 210deg,
+      rgba(148,154,160,calc(.34 + .18 * var(--hot))) 296deg,
+      rgba(255,255,255,calc(.28 + .72 * var(--hot))) 360deg) border-box;
+  box-shadow:
+    calc(cos(var(--ca)) * 14px * var(--hot)) calc(sin(var(--ca)) * 14px * var(--hot)) 34px rgba(255,255,255,calc(.11 * var(--hot))),
+    inset 0 1px 0 rgba(255,255,255,.07),
+    inset 0 -1px 2px rgba(0,0,0,.55);
+}
+
+/* ---------- components ---------- */
+.field{ flex:1; height:52px; display:flex; align-items:center; padding:0 20px; }
+.field .ph{ color:#c9cdd1; font-size:15px; letter-spacing:.01em; }
+
+.ringbtn{ width:52px; height:52px; flex:none; border-radius:50%; display:grid; place-items:center; }
+.ringbtn.sm{ width:46px; height:46px; }
+.ringbtn svg{ width:20px; height:20px; stroke:#f4f5f6; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+
+.btn{ height:52px; flex:1; display:grid; place-items:center; font-size:15px; }
+.btn.ghost{ background:
+    linear-gradient(#0a0b0c,#0a0b0c) padding-box,
+    conic-gradient(from var(--ca),
+      rgba(255,255,255,calc(.16 + .5 * var(--hot))) 0deg,
+      rgba(110,115,121,.3) 70deg, rgba(52,55,60,.3) 180deg, rgba(110,115,121,.3) 290deg,
+      rgba(255,255,255,calc(.16 + .5 * var(--hot))) 360deg) border-box;
+  color:#c9cdd1; }
+
+.seg{ position:relative; height:46px; flex:1; display:flex; align-items:center; padding:3px; }
+.seg span{ flex:1; text-align:center; font-size:13px; color:var(--dim); position:relative; z-index:1; }
+.seg span.on{ color:#f4f5f6; }
+.seg .segpill{ position:absolute; top:3px; bottom:3px; left:calc(33.333% + 3px); width:calc(33.333% - 6px); border-radius:999px;
+  background:
+    radial-gradient(160% 220% at calc(50% + cos(var(--ca)) * 40% * var(--hot)) calc(50% + sin(var(--ca)) * 40% * var(--hot)),
+      rgba(255,255,255,calc(.4 * var(--hot))) 0%, rgba(255,255,255,.05) 45%, transparent 70%),
+    linear-gradient(calc(var(--ca) + 1.5708rad), #3a4046, #1d2024 55%, #2b3036);
+  box-shadow:0 1px 4px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.12);
+  transform:translateX(calc(cos(var(--ca)) * 5px * var(--hot))); }
+
+.toggle{ width:58px; height:34px; flex:none; border-radius:999px; position:relative; }
+.toggle .knob{ position:absolute; top:3px; left:calc(100% - 34px + cos(var(--ca)) * 6px * var(--hot)); width:28px; height:28px; border-radius:50%;
+  background:
+    radial-gradient(140% 140% at calc(50% + cos(var(--ca)) * 38% * var(--hot)) calc(50% + sin(var(--ca)) * 38% * var(--hot)),
+      rgba(255,255,255,calc(.5 * var(--hot) + .12)) 0%, rgba(255,255,255,.06) 55%, transparent 75%),
+    linear-gradient(calc(var(--ca) + 1.5708rad), #454b52, #22262a 60%, #343a40);
+  box-shadow:0 1px 5px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.18); }
+
+.slider{ position:relative; flex:1; height:46px; display:flex; align-items:center; }
+.slider .track{ position:relative; width:100%; height:4px; border-radius:4px; background:#26292d; overflow:visible; }
+.slider .fill{ position:absolute; left:0; top:0; bottom:0; width:62%; border-radius:4px;
+  background:linear-gradient(calc(var(--ca) + 1.5708rad), #5c646c, #31363c 55%, #484f57);
+  box-shadow:calc(cos(var(--ca)) * 6px * var(--hot)) calc(sin(var(--ca)) * 6px * var(--hot)) 12px rgba(255,255,255,calc(.1 * var(--hot))); }
+.slider .thumb{ position:absolute; left:62%; top:50%; width:26px; height:26px; border-radius:50%;
+  transform:translate(-50%,-50%) translate(calc(cos(var(--ca)) * 8px * var(--hot)), calc(sin(var(--ca)) * 8px * var(--hot)));
+  background:
+    radial-gradient(140% 140% at calc(50% + cos(var(--ca)) * 38% * var(--hot)) calc(50% + sin(var(--ca)) * 38% * var(--hot)),
+      rgba(255,255,255,calc(.55 * var(--hot) + .12)) 0%, rgba(255,255,255,.07) 55%, transparent 75%),
+    linear-gradient(calc(var(--ca) + 1.5708rad), #4a5158, #24282c 60%, #3a4148);
+  box-shadow:0 1px 6px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.2); }
+
+.search{ flex:1; height:46px; display:flex; align-items:center; gap:10px; padding:0 18px; }
+.search svg{ width:16px; height:16px; stroke:var(--dim); fill:none; stroke-width:2; stroke-linecap:round; }
+.search .ph{ color:var(--dim); font-size:14px; }
+
+.ring{ position:relative; width:64px; height:64px; flex:none; border-radius:50%;
+  background:
+    conic-gradient(from var(--ca), rgba(255,255,255,calc(.5 * var(--hot))) 0deg, transparent 90deg),
+    conic-gradient(from -90deg, #e8ebee 0deg 245deg, #23262a 245deg 360deg);
+  -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 5.5px), #000 calc(100% - 4.5px));
+          mask:radial-gradient(farthest-side, transparent calc(100% - 5.5px), #000 calc(100% - 4.5px)); }
+.ringwrap{ display:flex; align-items:center; gap:16px; }
+.ringwrap .pct{ font-size:13px; color:var(--dim); font-variant-numeric:tabular-nums; }
+
+.chips{ display:flex; gap:8px; }
+.chip{ height:34px; padding:0 15px; display:grid; place-items:center; font-size:12.5px; color:#c9cdd1; }
+
+.icons{ justify-content:center; gap:22px; }
+
+footer{ display:flex; justify-content:space-between; align-items:center; padding:0 2px; min-height:24px; }
+footer .hint{ color:var(--dim); font-size:10.5px; letter-spacing:.03em; }
+footer .ctl button{ background:none; border:none; color:var(--dim); font-size:10.5px; letter-spacing:.06em; padding:6px 8px; font-family:inherit; }
+footer .ctl button:active{ color:#fff; }
+</style></head><body>
+<header><span class="logo">M E T A L</span><span class="st" id="st">connecting</span></header>
+<main>
+  <div class="row">
+    <div class="m metal field"><span class="ph">Your email</span></div>
+    <div class="m metal ringbtn"><svg viewBox="0 0 24 24"><path d="M4 12h14M12 5l7 7-7 7"/></svg></div>
+  </div>
+  <div class="row">
+    <div class="m metal btn primary"><span>Continue</span></div>
+    <div class="m metal btn ghost"><span>Not now</span></div>
+  </div>
+  <div class="row">
+    <div class="m metal seg"><div class="segpill"></div><span>Daily</span><span class="on">Weekly</span><span>Yearly</span></div>
+    <div class="m metal toggle"><div class="knob"></div></div>
+  </div>
+  <div class="row">
+    <div class="m slider"><div class="track"><div class="fill"></div></div><div class="thumb"></div></div>
+  </div>
+  <div class="row">
+    <div class="m metal search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><span class="ph">Search</span></div>
+  </div>
+  <div class="row spread">
+    <div class="ringwrap"><div class="m ring"></div><span class="pct">68% sync</span></div>
+    <div class="chips">
+      <div class="m metal chip">Design</div>
+      <div class="m metal chip">Motion</div>
+    </div>
+  </div>
+  <div class="row icons">
+    <div class="m metal ringbtn sm"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.6-9-9c-1.2-2.7.6-6 3.8-6 2 0 3.4 1.1 4.2 2.6L12 9l1-1.4C13.8 6.1 15.2 5 17.2 5c3.2 0 5 3.3 3.8 6-2 4.4-9 9-9 9z"/></svg></div>
+    <div class="m metal ringbtn sm"><svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.8-4.5 4.2 1.1 6-5.4-2.9L6.6 19.6l1.1-6L3.2 9.4l6.1-.8z"/></svg></div>
+    <div class="m metal ringbtn sm"><svg viewBox="0 0 24 24"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 13v6h14v-6"/></svg></div>
+  </div>
+</main>
+<footer>
+  <span class="hint" id="hint"></span>
+  <span class="ctl"><button id="zero">zero</button><button id="flip">flip pole</button><button id="demo">demo</button></span>
+</footer>
+<script>
+"use strict";
+// Liquid-metal UI driven by the phone magnetometer.
+// Sensor plumbing is the same as /m/: the phone's Termux sender streams {m,q} into the room,
+// this page listens as a "mac" client, zeroes a baseline, classifies the residual direction.
+(() => {
+const $ = (id) => document.getElementById(id);
+const qs = new URLSearchParams(location.search);
+const room = (qs.get("c") || "PIXEL6A").toUpperCase();
+
+const rot = (q, v, inv) => {
+  let [x, y, z, w] = q; if (inv) { x = -x; y = -y; z = -z; }
+  const [vx, vy, vz] = v;
+  const tx = 2 * (y * vz - z * vy), ty = 2 * (z * vx - x * vz), tz = 2 * (x * vy - y * vx);
+  return [vx + w * tx + (y * tz - z * ty), vy + w * ty + (z * tx - x * tz), vz + w * tz + (x * ty - y * tx)];
+};
+const S = { m:null, q:[0,0,0,1], t:0, b0:null, buf:[], res:[0,0,0], same:0,
+  flip: parseInt(localStorage.getItem("magnet-metal-flip") || "1", 10), rs:[0,0,0],
+  sang:0, slean:0, px:0, py:0, vx:0, vy:0, wob:0, auto:true, frozen:true };
+
+function onSample(d) {
+  const now = performance.now();
+  if (S.m && d.m[0] === S.m[0] && d.m[1] === S.m[1] && d.m[2] === S.m[2]) S.same++; else S.same = 0;
+  S.m = d.m; S.q = d.q || [0,0,0,1]; S.t = now;
+  S.buf.push([now, rot(S.q, S.m, false)]);
+  while (S.buf.length && now - S.buf[0][0] > 1500) S.buf.shift();
+  if (S.same < 15 && S.b0) {
+    const b = rot(S.q, S.b0, true);
+    S.res = [S.m[0]-b[0], S.m[1]-b[1], S.m[2]-b[2]];
+  }
+}
+function zero() {
+  const now = performance.now(), a = S.buf.filter((e) => now - e[0] < 1000);
+  if (a.length < 8 || S.same >= 15) return false;
+  S.b0 = [0,1,2].map((i) => a.reduce((s, e) => s + e[1][i], 0) / a.length); S.res = [0,0,0]; return true;
+}
+const say = (t, ms=2500) => { $("hint").textContent = t; clearTimeout(say.t); say.t = setTimeout(() => $("hint").textContent = "", ms); };
+$("zero").onclick = () => say(zero() ? "zeroed" : "no fresh sensor data");
+$("flip").onclick = () => { S.flip *= -1; localStorage.setItem("magnet-metal-flip", S.flip); say(S.flip > 0 ? "pole as taught" : "pole flipped"); };
+
+// demo modes: ?demo=orbit orbits a virtual magnet; ?px=&py= pins it (spring coords, y up); drag = touch magnet
+let demoMode = qs.get("demo") === "orbit";
+const snap = qs.get("snap") === "1";   // screenshot mode: no springs, first frame is already settled
+let pinned = (qs.get("px") !== null && qs.get("py") !== null) ? { x:parseFloat(qs.get("px")), y:parseFloat(qs.get("py")) } : null;
+$("demo").onclick = () => { demoMode = !demoMode; say(demoMode ? "demo orbit on" : "demo orbit off"); };
+let touch = null;
+addEventListener("pointerdown", (e) => { if (e.target.closest("button")) return; touch = [e.clientX, e.clientY]; });
+addEventListener("pointermove", (e) => { if (touch) touch = [e.clientX, e.clientY]; });
+addEventListener("pointerup", () => { touch = null; });
+
+let ws, connected = false;
+function connect() {
+  ws = new WebSocket("wss://" + location.host + "/ws?role=mac&room=" + room);
+  ws.onopen = () => { connected = true; };
+  ws.onmessage = (e) => { let d; try { d = JSON.parse(e.data); } catch { return; } if (d.type === "s" && Array.isArray(d.m)) onSample(d); };
+  ws.onclose = () => { connected = false; setTimeout(connect, 1200); };
+}
+connect();
+(async () => { try { await navigator.wakeLock.request("screen"); } catch {} })();
+document.addEventListener("visibilitychange", async () => { if (document.visibilityState === "visible") { try { await navigator.wakeLock.request("screen"); } catch {} } });
+
+// learned 24-direction classifier (same fingerprints as /m/)
+const FP = [[254.33,40.76,-8.41],[100.47,2.68,-30.56],[66.22,-3.14,-23.75],[50.93,-12.19,-18.65],[41.92,-27.56,-14.11],[36.15,-34.25,-12.54],[28.88,-35.18,-11.69],[20.68,-28.12,-8.5],[14.99,-20.52,-7.15],[8.62,-14.56,-5.27],[5.5,-10.66,-4.17],[5.47,-11.05,-3.92],[3.99,-12.77,-3.34],[2.36,-13.41,-3.44],[2.27,-17.0,-4.7],[7.04,-31.33,-9.09],[10.1,-56.64,-12.27],[17.62,-91.61,-11.12],[2.66,-123.67,-0.87],[75.09,-116.47,133.31],[-472.72,-259.29,213.79],[-485.4,593.56,67.23],[71.02,547.29,-1.17],[331.73,265.65,-8.58]];
+const FPN = FP.map((v) => Math.hypot(v[0], v[1], v[2]));
+const KS = [0.5,0.6,0.72,0.85,1,1.18,1.4,1.7,2];
+function classify(r) {
+  const ll = new Array(24).fill(-1e9), kb = new Array(24).fill(1);
+  for (let i = 0; i < 24; i++) {
+    const sg = 0.2 * FPN[i] + 3;
+    for (const k of KS) {
+      const dx = r[0]-k*FP[i][0], dy = r[1]-k*FP[i][1], dz = r[2]-k*FP[i][2];
+      const l = -(dx*dx+dy*dy+dz*dz)/(2*k*k*sg*sg) - 3*Math.log(k*sg) - 0.5*Math.pow(Math.log(k)/0.4, 2);
+      if (l > ll[i]) { ll[i] = l; kb[i] = k; }
+    }
+  }
+  let mx = -1e9, bi = 0; for (let i = 0; i < 24; i++) if (ll[i] > mx) { mx = ll[i]; bi = i; }
+  let sum = 0, c = 0, s = 0; const w = ll.map((l) => Math.exp(l - mx)); for (const x of w) sum += x;
+  for (let i = 0; i < 24; i++) { const p = w[i]/sum, a = i*Math.PI/12; c += p*Math.cos(a); s += p*Math.sin(a); }
+  const sg = 0.2*FPN[bi]+3, k = kb[bi];
+  const d = Math.hypot(r[0]-k*FP[bi][0], r[1]-k*FP[bi][1], r[2]-k*FP[bi][2])/(k*sg);
+  return { ang:(Math.atan2(s,c)*180/Math.PI+360)%360, conc:Math.hypot(c,s), fit:d, k };
+}
+
+const FLOOR = 3, SENS = 1.5;
+const comps = [...document.querySelectorAll(".m")].map((el) => ({ el, inf:0, a:-1.57, tx:0, ty:0 }));
+let tprev = performance.now();
+
+function frame(now) {
+  const dt = Math.min(0.05, (now - tprev)/1000); tprev = now;
+  const vw = innerWidth, vh = innerHeight, R = Math.min(vw, vh) * 0.52;
+  S.frozen = !S.m || now - S.t > 1500 || S.same >= 15;
+  if (S.auto && !S.b0 && !S.frozen && S.buf.length > 20 && now - S.buf[0][0] > 1000) {
+    if (zero()) { S.auto = false; say("auto-zeroed. keep magnets away, then use zero", 4000); }
+  }
+  let dir = [0,0], lean = 0, last = null;
+  if (pinned) { const m = Math.hypot(pinned.x, pinned.y) || 1; dir = [pinned.x/m, pinned.y/m]; lean = Math.min(1, m);
+    if (snap) { S.sang = Math.atan2(dir[0], dir[1]); S.slean = lean; S.px = dir[0]*lean; S.py = dir[1]*lean; } }
+  else if (touch) {
+    const dx = touch[0] - vw/2, dy = vh/2 - touch[1], m = Math.hypot(dx, dy) || 1;
+    dir = [dx/m, dy/m]; lean = Math.min(1, m/(Math.min(vw, vh)*.5));
+  } else if (demoMode || (S.frozen && !S.m && now - S.t > 4000)) {
+    const t = now/1000;
+    dir = [Math.cos(t*0.45), Math.sin(t*0.45)];
+    lean = 0.55 + 0.35*Math.sin(t*0.23);
+    if (!demoMode && !S.m) demoMode = true;
+  } else if (!S.frozen && S.b0) {
+    const ka = 1 - Math.exp(-dt/0.15); for (let i = 0; i < 3; i++) S.rs[i] += (S.res[i]-S.rs[i])*ka;
+    const r = [S.rs[0]*S.flip, S.rs[1]*S.flip, S.rs[2]*S.flip], mag = Math.hypot(r[0], r[1], r[2]);
+    if (mag > FLOOR/SENS) {
+      last = classify(r);
+      const th = last.ang*Math.PI/180;
+      dir = [Math.sin(th), Math.cos(th)];
+      const confGate = Math.min(1, Math.max(0, (last.conc-0.4)/0.4));
+      const fitGate = Math.min(1, Math.max(0, (6-last.fit)/3));
+      lean = Math.min(1, Math.max(0.2, 0.6+0.4*Math.log2(last.k))) * confGate * fitGate;
+    }
+  }
+  // smoothing + damped spring (same feel as the blob page)
+  const tl = lean, hasDir = Math.hypot(dir[0], dir[1]) > 0.1;
+  if (hasDir && tl > 0.02) {
+    const ta = Math.atan2(dir[0], dir[1]);
+    let da = ta - S.sang; da = Math.atan2(Math.sin(da), Math.cos(da));
+    const w = Math.min(1, tl/0.3);
+    const step = da * (1 - Math.exp(-dt*w/0.3));
+    S.sang += Math.max(-3.0*dt, Math.min(3.0*dt, step));
+  }
+  const tau = tl > S.slean ? 0.45 : 0.9;
+  S.slean += Math.max(-1.2*dt, Math.min(1.2*dt, (tl - S.slean)*(1 - Math.exp(-dt/tau))));
+  const Tx = Math.sin(S.sang)*S.slean, Ty = Math.cos(S.sang)*S.slean, W = 7, Z = 0.5;
+  for (let i = 0, n = Math.max(1, Math.ceil(dt/0.008)); i < n; i++) {
+    const h = dt/n;
+    S.vx += (W*W*(Tx-S.px) - 2*Z*W*S.vx)*h; S.vy += (W*W*(Ty-S.py) - 2*Z*W*S.vy)*h;
+    S.px += S.vx*h; S.py += S.vy*h;
+  }
+  const sp = Math.hypot(S.vx, S.vy);
+  S.wob += (Math.min(1, sp*1.1) - S.wob)*(1 - Math.exp(-dt/(Math.min(1, sp*1.1) > S.wob ? 0.08 : 0.7)));
+
+  // virtual magnet point on screen (spring coords are y-up, DOM is y-down)
+  const mx = vw/2 + S.px*R, my = vh/2 - S.py*R;
+  const magAmt = Math.min(1, Math.hypot(S.px, S.py));
+  const wob = S.wob;
+
+  for (const c of comps) {
+    const r = c.el.getBoundingClientRect();
+    const cx = r.left + r.width/2, cy = r.top + r.height/2;
+    const vx = mx - cx, vy = my - cy, dist = Math.hypot(vx, vy) || 1;
+    const fall = Math.min(1, Math.max(0, (520 - dist)/320));      // 1 at the magnet, 0 past ~520px
+    const infT = Math.min(1, magAmt * (0.22 + 0.78*fall));
+    const aT = Math.atan2(vy, vx);
+    const k = snap ? 1 : 1 - Math.exp(-dt/0.1);
+    c.inf += (infT - c.inf)*k;
+    let da = aT - c.a; da = Math.atan2(Math.sin(da), Math.cos(da)); c.a += da*k;
+    const pull = 10 * c.inf * (0.35 + 0.65*fall);
+    c.tx += (Math.cos(aT)*pull - c.tx)*k; c.ty += (Math.sin(aT)*pull - c.ty)*k;
+    const sc = 1 + 0.035 * c.inf * (0.35 + 0.65*fall) + 0.03 * c.inf * wob * Math.sin(now/1000*26);
+    c.el.style.setProperty("--a", c.a.toFixed(3) + "rad");
+    c.el.style.setProperty("--inf", c.inf.toFixed(3));
+    c.el.style.setProperty("--tx", c.tx.toFixed(2) + "px");
+    c.el.style.setProperty("--ty", c.ty.toFixed(2) + "px");
+    c.el.style.setProperty("--sc", sc.toFixed(3));
+  }
+
+  const st = $("st");
+  st.textContent = pinned ? "pinned demo" : touch ? "touch demo" : demoMode ? "demo" :
+    !connected ? "offline" : !S.m ? "waiting for sensor" : S.frozen ? "sensor frozen" : S.b0 ?
+    ("live · " + Math.hypot(S.res[0],S.res[1],S.res[2]).toFixed(0) + " µT" + (last ? " · " + last.ang.toFixed(0) + "°" : "")) : "zeroing";
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+</body></html>
