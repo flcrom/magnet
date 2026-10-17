@@ -200,10 +200,11 @@ $("zero").onclick = () => say(zero() ? "zeroed" : "no fresh sensor data");
 $("flip").onclick = () => { S.flip *= -1; localStorage.setItem("magnet-metal-flip", S.flip); say(S.flip > 0 ? "pole as taught" : "pole flipped"); };
 
 // demo modes: ?demo=orbit orbits a virtual magnet; ?px=&py= pins it (spring coords, y up); drag = touch magnet
-let demoMode = qs.get("demo") === "orbit";
+let demoManual = qs.get("demo") === "orbit";   // ?demo=orbit or the demo button
+let demoAuto = false;                          // fallback orbit only until the first real sample
 const snap = qs.get("snap") === "1";   // screenshot mode: no springs, first frame is already settled
 let pinned = (qs.get("px") !== null && qs.get("py") !== null) ? { x:parseFloat(qs.get("px")), y:parseFloat(qs.get("py")) } : null;
-$("demo").onclick = () => { demoMode = !demoMode; say(demoMode ? "demo orbit on" : "demo orbit off"); };
+$("demo").onclick = () => { demoManual = !demoManual; say(demoManual ? "demo orbit on" : "demo orbit off"); };
 let touch = null;
 addEventListener("pointerdown", (e) => { if (e.target.closest("button")) return; touch = [e.clientX, e.clientY]; });
 addEventListener("pointermove", (e) => { if (touch) touch = [e.clientX, e.clientY]; });
@@ -213,7 +214,7 @@ let ws, connected = false;
 function connect() {
   ws = new WebSocket("wss://" + location.host + "/ws?role=mac&room=" + room);
   ws.onopen = () => { connected = true; };
-  ws.onmessage = (e) => { let d; try { d = JSON.parse(e.data); } catch { return; } if (d.type === "s" && Array.isArray(d.m)) onSample(d); };
+  ws.onmessage = (e) => { let d; try { d = JSON.parse(e.data); } catch { return; } if (d.type === "s" && Array.isArray(d.m)) { demoAuto = false; onSample(d); } };
   ws.onclose = () => { connected = false; setTimeout(connect, 1200); };
 }
 connect();
@@ -259,11 +260,11 @@ function frame(now) {
   else if (touch) {
     const dx = touch[0] - vw/2, dy = vh/2 - touch[1], m = Math.hypot(dx, dy) || 1;
     dir = [dx/m, dy/m]; lean = Math.min(1, m/(Math.min(vw, vh)*.5));
-  } else if (demoMode || (S.frozen && !S.m && now - S.t > 4000)) {
+  } else if (demoManual || demoAuto || (S.frozen && !S.m && now - S.t > 4000)) {
     const t = now/1000;
     dir = [Math.cos(t*0.45), Math.sin(t*0.45)];
     lean = 0.55 + 0.35*Math.sin(t*0.23);
-    if (!demoMode && !S.m) demoMode = true;
+    if (!demoManual && !S.m) demoAuto = true;
   } else if (!S.frozen && S.b0) {
     const ka = 1 - Math.exp(-dt/0.15); for (let i = 0; i < 3; i++) S.rs[i] += (S.res[i]-S.rs[i])*ka;
     const r = [S.rs[0]*S.flip, S.rs[1]*S.flip, S.rs[2]*S.flip], mag = Math.hypot(r[0], r[1], r[2]);
@@ -322,7 +323,7 @@ function frame(now) {
   }
 
   const st = $("st");
-  st.textContent = pinned ? "pinned demo" : touch ? "touch demo" : demoMode ? "demo" :
+  st.textContent = pinned ? "pinned demo" : touch ? "touch demo" : (demoManual || demoAuto) ? "demo" :
     !connected ? "offline" : !S.m ? "waiting for sensor" : S.frozen ? "sensor frozen" : S.b0 ?
     ("live · " + Math.hypot(S.res[0],S.res[1],S.res[2]).toFixed(0) + " µT" + (last ? " · " + last.ang.toFixed(0) + "°" : "")) : "zeroing";
   requestAnimationFrame(frame);
