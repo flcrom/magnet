@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#000000">
+<title>magnet</title><meta name="robots" content="noindex">
+<link rel="stylesheet" href="/style.css">
+<style>
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.top{position:fixed;left:0;right:0;top:0;display:flex;justify-content:space-between;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;border-bottom:1px solid var(--line);background:#000}
+.bar{position:fixed;left:0;right:0;bottom:0;border-top:1px solid var(--line);background:#000;padding:10px 14px calc(12px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px}
+.row{display:flex;gap:8px;align-items:center}
+.row button{flex:1;padding:14px 8px}
+input[type=range]{accent-color:#fff;flex:1}
+.on{color:#fff}.off{color:var(--dim)}
+#hint{min-height:1.5em}
+body.full .top,body.full .bar{opacity:0;transition:opacity .3s}
+body.full .top:active,body.full .bar:active{opacity:1}
+</style></head><body>
+<canvas id="c"></canvas>
+<div class="top"><b>magnet</b><span id="status" class="off">connecting</span></div>
+<div class="bar">
+  <div class="row"><span id="hint" class="dim"></span><span id="read" class="dim" style="margin-left:auto"></span></div>
+  <div class="row"><span class="dim">sens</span><input id="sens" type="range" min="0" max="100" value="50"></div>
+  <div class="row"><button id="zero">Zero</button><button id="flip">Flip</button><button id="fs">Fullscreen</button></div>
+</div>
+<script src="/m/old/m.js"></script>
+</body></html>
