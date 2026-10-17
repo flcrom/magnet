@@ -12,7 +12,7 @@
   };
   const len = (v) => Math.hypot(v[0], v[1], v[2]);
   const S = { m: null, q: [0, 0, 0, 1], t: 0, b0: null, buf: [], res: [0, 0, 0], same: 0, frozen: false,
-    flip: parseInt(localStorage.getItem("magnet-m2-flip") || "1", 10), sdir: [0, 0], slean: 0, ssc: 1, auto: true };
+    flip: parseInt(localStorage.getItem("magnet-m2-flip") || "1", 10), sdir: [0, 0], sang: 0, slean: 0, rs: [0, 0, 0], ssc: 1, auto: true };
 
   function onSample(d) {
     const now = performance.now();
@@ -157,7 +157,8 @@ void main(){
       const dx = touch[0] - innerWidth / 2, dy = innerHeight / 2 - touch[1], m = Math.hypot(dx, dy) || 1;
       dir = [dx / m, dy / m]; lean = Math.min(1, m / (Math.min(innerWidth, innerHeight) * .5));
     } else if (!S.frozen && S.b0) {
-      const r = [S.res[0] * S.flip, S.res[1] * S.flip, S.res[2] * S.flip], mag = len(r), sens = 0.5 + parseFloat($("sens").value) / 50;
+      const ka = 1 - Math.exp(-dt / 0.15); for (let i = 0; i < 3; i++) S.rs[i] += (S.res[i] - S.rs[i]) * ka;
+      const r = [S.rs[0] * S.flip, S.rs[1] * S.flip, S.rs[2] * S.flip], mag = len(r), sens = 0.5 + parseFloat($("sens").value) / 50;
       if (mag > FLOOR / sens) {
         last = classify(r);
         const th = last.ang * Math.PI / 180;
@@ -169,11 +170,26 @@ void main(){
         sc = 1 + 0.2 * Math.min(1, Math.log(1 + mag) / 6) * (1 - fitGate);  // unknown pattern: swell instead of pointing
       }
     }
-    const k = 1 - Math.exp(-dt * 9);
-    S.sdir[0] += (dir[0] * lean - S.sdir[0]) * k; S.sdir[1] += (dir[1] * lean - S.sdir[1]) * k; S.ssc += (sc - S.ssc) * k;
-    const m = Math.hypot(S.sdir[0], S.sdir[1]);
-    const d = m > 1e-4 ? [S.sdir[0] / m, S.sdir[1] / m] : [0, 0];
-    gl.uniform2f(uRes, cv.width, cv.height); gl.uniform1f(uT, now / 1000); gl.uniform2f(uDir, d[0], d[1]); gl.uniform1f(uLean, Math.min(1, m)); gl.uniform1f(uSc, S.ssc);
+    // smoothing: the target (angle, lean) is noisy, the drawn blob follows it slowly
+    // residual is low-passed first (tau 0.15 s); angle follows with a slew cap and only moves in proportion to how sure the lean is;
+    // lean rises slowly (tau 0.45 s) and falls slower (tau 0.9 s), so a noise burst or a dropout does not snap the blob.
+    const tl = lean, hasDir = Math.hypot(dir[0], dir[1]) > 0.1;
+    if (hasDir && tl > 0.02) {
+      const ta = Math.atan2(dir[0], dir[1]);
+      let da = ta - S.sang; da = Math.atan2(Math.sin(da), Math.cos(da));
+      const w = Math.min(1, tl / 0.3);
+      const step = da * (1 - Math.exp(-dt * w / 0.3));
+      const cap = 3.0 * dt; // rad/s, about 170 deg/s
+      S.sang += Math.max(-cap, Math.min(cap, step));
+    }
+    const tau = tl > S.slean ? 0.45 : 0.9;
+    let dl = (tl - S.slean) * (1 - Math.exp(-dt / tau));
+    const capL = 1.2 * dt; dl = Math.max(-capL, Math.min(capL, dl));
+    S.slean += dl;
+    S.ssc += (sc - S.ssc) * (1 - Math.exp(-dt / 0.6));
+    const d = [Math.sin(S.sang), Math.cos(S.sang)];
+    const m = S.slean;
+    gl.uniform2f(uRes, cv.width, cv.height); gl.uniform1f(uT, now / 1000); gl.uniform2f(uDir, d[0], d[1]); gl.uniform1f(uLean, Math.min(1, Math.max(0, m))); gl.uniform1f(uSc, S.ssc);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     const st = $("status");
     st.textContent = touch ? "touch demo" : !connected ? "offline" : !S.m ? "waiting for sensor" : S.frozen ? "sensor frozen, recovering" : S.b0 ? "live" : "zeroing";
