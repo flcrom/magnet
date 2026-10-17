@@ -12,7 +12,7 @@
   };
   const len = (v) => Math.hypot(v[0], v[1], v[2]);
   const S = { m: null, q: [0, 0, 0, 1], t: 0, b0: null, buf: [], res: [0, 0, 0], same: 0, frozen: false,
-    flip: parseInt(localStorage.getItem("magnet-m2-flip") || "1", 10), sdir: [0, 0], sang: 0, slean: 0, rs: [0, 0, 0], ssc: 1, auto: true };
+    flip: parseInt(localStorage.getItem("magnet-m2-flip") || "1", 10), sdir: [0, 0], sang: 0, px: 0, py: 0, vx: 0, vy: 0, wob: 0, slean: 0, rs: [0, 0, 0], ssc: 1, auto: true };
 
   function onSample(d) {
     const now = performance.now();
@@ -58,14 +58,14 @@
   const vs = "#version 300 es\nin vec2 p;void main(){gl_Position=vec4(p,0,1);}";
   const fs = `#version 300 es
 precision highp float;
-uniform vec2 res; uniform float t; uniform vec2 dir; uniform float lean; uniform float sc;
+uniform vec2 res; uniform float t; uniform vec2 dir; uniform float lean; uniform float sc; uniform float wob;
 out vec4 o;
 float smin(float a,float b,float k){float h=max(k-abs(a-b),0.)/k;return min(a,b)-h*h*k*.25;}
 float sdf(vec2 p){
   float R=.27*sc;
   vec2 c0=-dir*lean*.04;
   float a=atan(p.y,p.x);
-  float w=.004*sin(a*3.+t*1.1)+.003*sin(a*5.-t*1.7)+lean*.006*sin(a*7.+t*3.);
+  float w=.004*sin(a*3.+t*1.1)+.003*sin(a*5.-t*1.7)+lean*.006*sin(a*7.+t*3.)+wob*(.010*sin(a*2.+t*5.)+.007*sin(a*3.-t*6.5));
   float d1=length(p-c0)-R-w;
   float r2=R*(.18+.42*lean);
   vec2 c1=c0+dir*R*(.55+.95*lean);
@@ -78,7 +78,7 @@ float H(vec2 p){
   float u=clamp(d/.17,0.,1.);
   float rim=.13*sqrt(1.-(1.-u)*(1.-u));
   float bump=.07*exp(-dot(p+dir*lean*.05,p+dir*lean*.05)/.045);
-  return rim+bump*smoothstep(0.,.08,d);
+  return rim+bump*smoothstep(0.,.08,d)+wob*.010*sin(length(p)*38.-t*7.)*smoothstep(0.,.1,d);
 }
 float env(vec3 r){
   float up=r.y*.5+.5;
@@ -111,7 +111,7 @@ void main(){
   const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
   const loc = gl.getAttribLocation(pr, "p"); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
   const U = (n) => gl.getUniformLocation(pr, n);
-  const uRes = U("res"), uT = U("t"), uDir = U("dir"), uLean = U("lean"), uSc = U("sc");
+  const uRes = U("res"), uT = U("t"), uDir = U("dir"), uLean = U("lean"), uSc = U("sc"), uWob = U("wob");
 
   function size() { const dpr = Math.min(devicePixelRatio || 1, 2); cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; gl.viewport(0, 0, cv.width, cv.height); }
   size();
@@ -187,9 +187,19 @@ void main(){
     const capL = 1.2 * dt; dl = Math.max(-capL, Math.min(capL, dl));
     S.slean += dl;
     S.ssc += (sc - S.ssc) * (1 - Math.exp(-dt / 0.6));
-    const d = [Math.sin(S.sang), Math.cos(S.sang)];
-    const m = S.slean;
-    gl.uniform2f(uRes, cv.width, cv.height); gl.uniform1f(uT, now / 1000); gl.uniform2f(uDir, d[0], d[1]); gl.uniform1f(uLean, Math.min(1, Math.max(0, m))); gl.uniform1f(uSc, S.ssc);
+    // water: the smoothed target pulls the blob through a damped spring (a little overshoot, then it settles),
+    // and the speed of that motion drives surface wobble and ripples
+    const Tx = Math.sin(S.sang) * S.slean, Ty = Math.cos(S.sang) * S.slean, W = 7, Z = 0.5;
+    for (let i = 0, n = Math.max(1, Math.ceil(dt / 0.008)); i < n; i++) {
+      const h = dt / n;
+      S.vx += (W * W * (Tx - S.px) - 2 * Z * W * S.vx) * h; S.vy += (W * W * (Ty - S.py) - 2 * Z * W * S.vy) * h;
+      S.px += S.vx * h; S.py += S.vy * h;
+    }
+    const sp = Math.hypot(S.vx, S.vy);
+    S.wob += (Math.min(1, sp * 1.1) - S.wob) * (1 - Math.exp(-dt / (Math.min(1, sp * 1.1) > S.wob ? 0.08 : 0.7)));
+    const m = Math.min(1, Math.hypot(S.px, S.py));
+    const d = m > 1e-3 ? [S.px / Math.hypot(S.px, S.py), S.py / Math.hypot(S.px, S.py)] : [0, 0];
+    gl.uniform2f(uRes, cv.width, cv.height); gl.uniform1f(uT, now / 1000); gl.uniform2f(uDir, d[0], d[1]); gl.uniform1f(uLean, Math.min(1, Math.max(0, m))); gl.uniform1f(uSc, S.ssc); gl.uniform1f(uWob, S.wob);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     const st = $("status");
     st.textContent = touch ? "touch demo" : !connected ? "offline" : !S.m ? "waiting for sensor" : S.frozen ? "sensor frozen, recovering" : S.b0 ? "live" : "zeroing";
