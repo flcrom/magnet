@@ -1,0 +1,8 @@
+:root{color-scheme:dark;--fg:#fff;--dim:#8a8a8a;--line:#262626}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;background:#000;color:var(--fg);font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;-webkit-text-size-adjust:100%}
+button{font:inherit;color:var(--fg);background:#000;border:1px solid #3a3a3a;padding:10px 14px;cursor:pointer;border-radius:0;letter-spacing:.02em}
+button:hover,button:active{background:#fff;color:#000}
+button:disabled{opacity:.35;pointer-events:none}
+a{color:var(--fg)}
+.dim{color:var(--dim)}

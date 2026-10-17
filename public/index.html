@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>magnet</title><meta name="robots" content="noindex">
+<link rel="stylesheet" href="/style.css">
+<style>
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+.hud{position:fixed;left:0;right:0;bottom:0;display:flex;gap:0;border-top:1px solid var(--line);background:#000}
+.hud>div{padding:12px 16px;border-right:1px solid var(--line);min-width:0}
+.hud .grow{flex:1}
+.top{position:fixed;left:0;right:0;top:0;display:flex;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);background:#000}
+.code{font-size:22px;letter-spacing:.3em}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+input[type=range]{accent-color:#fff;width:120px}
+.on{color:#fff}.off{color:var(--dim)}
+#teach{position:fixed;left:50%;top:84px;transform:translateX(-50%);padding:8px 14px;border:1px solid #fff;background:#000;display:none}
+</style></head><body>
+<canvas id="c"></canvas>
+<div class="top">
+  <div><span class="dim">phone page</span> <b>magnet.flcrom.dev/p</b> <span class="dim">&nbsp;code</span> <span class="code" id="code"></span></div>
+  <div id="status" class="off">waiting for phone</div>
+</div>
+<div id="teach"></div>
+<div class="hud">
+  <div class="row"><button id="zero">1 &middot; Zero</button><button id="teachBtn">2 &middot; Teach sides</button><button id="flip">Flip</button></div>
+  <div class="row"><span class="dim">sensitivity</span><input id="sens" type="range" min="0" max="100" value="50"></div>
+  <div class="grow" id="read" class="dim">&nbsp;</div>
+  <div class="dim" id="hint">drag the mouse to test without a phone</div>
+</div>
+<script src="/mac.js"></script>
+</body></html>

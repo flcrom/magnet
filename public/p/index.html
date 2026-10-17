@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>magnet / phone</title><meta name="robots" content="noindex">
+<link rel="stylesheet" href="/style.css">
+<style>
+body{padding:20px 16px calc(24px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:16px;max-width:520px}
+h1{font:600 20px/1.2 ui-monospace,monospace;letter-spacing:-.01em}
+.box{border:1px solid var(--line);padding:14px}
+input{font:inherit;font-size:26px;letter-spacing:.3em;text-transform:uppercase;width:100%;background:#000;color:#fff;border:1px solid #3a3a3a;padding:12px;border-radius:0;text-align:center}
+button.big{width:100%;padding:18px;font-size:16px}
+.k{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:6px 0}
+.k:last-child{border:0}
+#msg{min-height:3em}
+</style></head><body>
+<h1>magnet / phone</h1>
+<div class="dim">Type the 4 letter code shown on your Mac, then start. Keep this screen on and the phone still.</div>
+<input id="code" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="CODE">
+<button class="big" id="go">Start sensing</button>
+<div class="box" id="stats" style="display:none">
+  <div class="k"><span class="dim">link</span><span id="link">-</span></div>
+  <div class="k"><span class="dim">magnetometer</span><span id="magsrc">-</span></div>
+  <div class="k"><span class="dim">orientation</span><span id="orisrc">-</span></div>
+  <div class="k"><span class="dim">field</span><span id="field">-</span></div>
+  <div class="k"><span class="dim">rate</span><span id="rate">-</span></div>
+</div>
+<div id="msg" class="dim"></div>
+<script src="/phone.js"></script>
+</body></html>
