@@ -65,6 +65,8 @@
       else if (m && !q) msg("Magnetometer works, but no orientation sensor. Keep the phone flat and still.");
       else if (m) msg("Streaming. Keep the phone flat on the desk, top edge pointing away from you, then press Zero on the Mac.");
     }, 1000);
-    setInterval(() => { if (m && ws && ws.readyState === 1) { ws.send(JSON.stringify({ type: "s", m, q: q || [0, 0, 0, 1], t: Date.now() })); sent++; } }, 33);
+    const buf = []; // batch frames and flush twice a second: each relay message is billed, so one message per sample would blow the free daily quota
+    setInterval(() => { if (!m) return; if (buf.length >= 300) buf.splice(0, 30); buf.push([m, q ? [q[0], q[1], q[2], q[3]] : [0, 0, 0, 1], Date.now()]); }, 33);
+    setInterval(() => { if (buf.length && ws && ws.readyState === 1) { ws.send(JSON.stringify({ type: "s", b: buf.splice(0, buf.length) })); sent++; } }, 500);
   };
 })();

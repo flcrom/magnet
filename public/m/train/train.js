@@ -22,11 +22,15 @@
     ws = new WebSocket("wss://" + location.host + "/ws?role=mac&room=" + room);
     ws.onopen = () => { conn = true; backoff = 500; };
     ws.onmessage = (e) => { let d; try { d = JSON.parse(e.data); } catch { return; }
-      if (d.type !== "s" || !Array.isArray(d.m)) return;
-      const now = performance.now();
-      if (st.m && d.m[0] === st.m[0] && d.m[1] === st.m[1] && d.m[2] === st.m[2]) st.same++; else st.same = 0;
-      st.m = d.m; st.q = d.q || [0, 0, 0, 1]; st.t = now;
-      if (st.rec && st.same < 15) st.rec.frames.push([Math.round(now - st.rec.t0), d.m.map((v) => +v.toFixed(3)), st.q.map((v) => +v.toFixed(5))]); };
+      if (d.type !== "s") return;
+      const take = (m, q) => {
+        const now = performance.now();
+        if (st.m && m[0] === st.m[0] && m[1] === st.m[1] && m[2] === st.m[2]) st.same++; else st.same = 0;
+        st.m = m; st.q = q || [0, 0, 0, 1]; st.t = now;
+        if (st.rec && st.same < 15) st.rec.frames.push([Math.round(now - st.rec.t0), m.map((v) => +v.toFixed(3)), st.q.map((v) => +v.toFixed(5))]);
+      };
+      if (Array.isArray(d.b)) { for (const f of d.b) take(f[0], f[1]); }
+      else if (Array.isArray(d.m)) take(d.m, d.q); };
     ws.onclose = () => { conn = false; setTimeout(connect, backoff = Math.min(backoff * 2, 5000)); };
   }
   connect();

@@ -89,6 +89,7 @@
     ws.onopen = () => { backoff = 500; };
     ws.onmessage = (e) => { let d; try { d = JSON.parse(e.data); } catch { return; }
       if (d.type === "presence") { S.phone = d.phone; }
+      else if (d.type === "s" && Array.isArray(d.b)) { for (const f of d.b) onSample({ m: f[0], q: f[1], t: f[2] }); }
       else if (d.type === "s" && Array.isArray(d.m)) onSample(d); };
     ws.onclose = () => { S.phone = 0; setTimeout(connect, backoff = Math.min(backoff * 2, 5000)); };
   }

@@ -214,7 +214,7 @@ let ws, connected = false;
 function connect() {
   ws = new WebSocket("wss://" + location.host + "/ws?role=mac&room=" + room);
   ws.onopen = () => { connected = true; };
-  ws.onmessage = (e) => { let d; try { d = JSON.parse(e.data); } catch { return; } if (d.type === "s" && Array.isArray(d.m)) { demoAuto = false; onSample(d); } };
+  ws.onmessage = (e) => { let d; try { d = JSON.parse(e.data); } catch { return; } if (d.type !== "s") return; if (Array.isArray(d.b)) { demoAuto = false; for (const f of d.b) onSample({ m: f[0], q: f[1], t: f[2] }); } else if (Array.isArray(d.m)) { demoAuto = false; onSample(d); } };
   ws.onclose = () => { connected = false; setTimeout(connect, 1200); };
 }
 connect();
